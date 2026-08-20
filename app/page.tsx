@@ -6,7 +6,7 @@ const DECK = ["?", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "☕"]
 const SESSION_KEY = "ponto-player";
 
 type Player = { name: string; admin: boolean; voted: boolean; vote: string | null };
-type PreviousRound = {
+type RoundHistory = {
   round: number;
   topic: string | null;
   average: number | null;
@@ -21,7 +21,7 @@ type RoomState = {
   isAdmin?: boolean;
   ownVote?: string | null;
   average?: number | null;
-  previous?: PreviousRound | null;
+  history?: RoundHistory[];
   players?: Player[];
   playerId?: string;
   error?: string;
@@ -174,15 +174,22 @@ export default function Home() {
               </div>
             )}
 
-            {room.isAdmin && room.previous && (
-              <section className="previous-round">
-                <div className="previous-heading">
-                  <div><small>RODADA {room.previous.round}</small><h2>{room.previous.topic}</h2></div>
-                  <span>Média <b>{room.previous.average ?? "—"}</b></span>
-                </div>
-                <div className="previous-votes">
-                  {room.previous.votes.map((vote, index) => (
-                    <div key={`${vote.name}-${index}`}><span>{vote.name}</span><b>{vote.value ?? "—"}</b></div>
+            {room.isAdmin && Boolean(room.history?.length) && (
+              <section className="round-history">
+                <h2>Histórico</h2>
+                <div className="history-list">
+                  {room.history?.map((round) => (
+                    <article className="previous-round" key={round.round}>
+                      <div className="previous-heading">
+                        <div><small>RODADA {round.round}</small><h3>{round.topic}</h3></div>
+                        <span>Média <b>{round.average ?? "—"}</b></span>
+                      </div>
+                      <div className="previous-votes">
+                        {round.votes.map((vote, index) => (
+                          <div key={`${vote.name}-${index}`}><span>{vote.name}</span><b>{vote.value ?? "—"}</b></div>
+                        ))}
+                      </div>
+                    </article>
                   ))}
                 </div>
               </section>

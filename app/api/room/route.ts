@@ -20,16 +20,24 @@ function error(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function average(votes: { value: string }[]) {
+  const numbers = votes.map((vote) => Number(vote.value)).filter(Number.isFinite);
+  return numbers.length
+    ? Math.round((numbers.reduce((sum, vote) => sum + vote, 0) / numbers.length) * 10) / 10
+    : null;
+}
+
 function snapshot(room: Room | null, playerId = "") {
   if (!room) return { active: false };
 
   const currentVotes = room.votes.filter((vote) => vote.round === room.round);
   const ownVote = currentVotes.find((vote) => vote.playerId === playerId)?.value ?? null;
-  const numericVotes = currentVotes.map((vote) => Number(vote.value)).filter(Number.isFinite);
-  const previousVotes = room.previousRound
-    ? room.votes.filter((vote) => vote.round === room.previousRound)
-    : [];
-  const previousNumericVotes = previousVotes.map((vote) => Number(vote.value)).filter(Number.isFinite);
+  const historyRounds = [...new Set([
+    ...Object.keys(room.topics).map(Number),
+    ...room.votes.map((vote) => vote.round),
+  ])]
+    .filter((round) => round < room.round)
+    .sort((a, b) => b - a);
 
   return {
     active: true,
@@ -39,28 +47,22 @@ function snapshot(room: Room | null, playerId = "") {
     isMember: room.players.some((player) => player.id === playerId),
     isAdmin: room.adminId === playerId,
     ownVote,
-    average:
-      room.revealed && numericVotes.length
-        ? Math.round((numericVotes.reduce((sum, vote) => sum + vote, 0) / numericVotes.length) * 10) / 10
-        : null,
-    previous:
-      room.adminId === playerId && room.previousRound
-        ? {
-            round: room.previousRound,
-            topic: room.previousTopic,
-            average: previousNumericVotes.length
-              ? Math.round(
-                  (previousNumericVotes.reduce((sum, vote) => sum + vote, 0) /
-                    previousNumericVotes.length) *
-                    10,
-                ) / 10
-              : null,
-            votes: room.players.map((player) => ({
-              name: player.name,
-              value: previousVotes.find((vote) => vote.playerId === player.id)?.value ?? null,
-            })),
-          }
-        : null,
+    average: room.revealed ? average(currentVotes) : null,
+    history:
+      room.adminId === playerId
+        ? historyRounds.map((round) => {
+            const votes = room.votes.filter((vote) => vote.round === round);
+            return {
+              round,
+              topic: room.topics[round] ?? `Rodada ${round}`,
+              average: average(votes),
+              votes: room.players.map((player) => ({
+                name: player.name,
+                value: votes.find((vote) => vote.playerId === player.id)?.value ?? null,
+              })),
+            };
+          })
+        : [],
     players: room.players.map((player) => {
       const vote = currentVotes.find((item) => item.playerId === player.id);
       return {
@@ -140,12 +142,14 @@ export async function POST(request: NextRequest) {
       if (action === "reveal") {
         await updateRoom({ revealed: true });
       } else if (action === "next") {
+        const nextRound = room.round + 1;
+        const nextTopic = clean(body.topic, 90) || room.topic;
         await updateRoom({
-          topic: clean(body.topic, 90) || room.topic,
-          previousTopic: room.topic,
-          previousRound: room.round,
+          topic: nextTopic,
+          [`topic:${room.round}`]: room.topic,
+          [`topic:${nextRound}`]: nextTopic,
           revealed: false,
-          round: room.round + 1,
+          round: nextRound,
         });
       } else if (action === "close") {
         await closeRoom();

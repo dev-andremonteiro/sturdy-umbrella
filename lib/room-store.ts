@@ -12,8 +12,7 @@ export type Room = {
   adminId: string;
   password: string;
   topic: string;
-  previousTopic: string | null;
-  previousRound: number | null;
+  topics: Record<number, string>;
   revealed: boolean;
   round: number;
   createdAt: number;
@@ -37,29 +36,43 @@ export async function readRoom(): Promise<Room | null> {
   if (!values?.adminId) return null;
 
   const players: Player[] = [];
-  const votes: Vote[] = [];
+  const votes = new Map<string, Vote>();
+  const topics: Record<number, string> = {};
 
   for (const [key, value] of Object.entries(values)) {
     if (key.startsWith("player:")) players.push(asObject<Player>(value));
-    if (key.startsWith("vote:")) votes.push(asObject<Vote>(value));
+    if (key.startsWith("vote:")) {
+      const vote = asObject<Vote>(value);
+      const voteKey = `${vote.round}:${vote.playerId}`;
+      if (key.split(":").length > 2 || !votes.has(voteKey)) votes.set(voteKey, vote);
+    }
+    if (key.startsWith("topic:")) topics[Number(key.slice(6))] = String(value);
+  }
+
+  const round = Number(values.round ?? 1);
+  const topic = String(values.topic ?? "Primeira estimativa");
+  topics[round] ??= topic;
+
+  // Mantém compatibilidade com salas abertas antes do histórico completo.
+  if (values.previousRound && values.previousTopic) {
+    topics[Number(values.previousRound)] ??= String(values.previousTopic);
   }
 
   return {
     adminId: String(values.adminId),
     password: String(values.password ?? ""),
-    topic: String(values.topic ?? "Primeira estimativa"),
-    previousTopic: values.previousTopic ? String(values.previousTopic) : null,
-    previousRound: values.previousRound ? Number(values.previousRound) : null,
+    topic,
+    topics,
     revealed: values.revealed === true || values.revealed === "true" || values.revealed === 1,
-    round: Number(values.round ?? 1),
+    round,
     createdAt: Number(values.createdAt ?? Date.now()),
     players: players.sort((a, b) => a.joinedAt - b.joinedAt),
-    votes,
+    votes: [...votes.values()],
   };
 }
 
 export async function createRoom(
-  room: Omit<Room, "players" | "votes" | "previousTopic" | "previousRound">,
+  room: Omit<Room, "players" | "votes" | "topics">,
   admin: Player,
 ) {
   const claimed = await db().set(LOCK_KEY, "1", { nx: true, ex: TTL_SECONDS });
@@ -70,6 +83,7 @@ export async function createRoom(
       adminId: room.adminId,
       password: room.password,
       topic: room.topic,
+      [`topic:${room.round}`]: room.topic,
       revealed: room.revealed,
       round: room.round,
       createdAt: room.createdAt,
@@ -88,7 +102,7 @@ export async function addPlayer(player: Player) {
 }
 
 export async function saveVote(vote: Vote) {
-  await db().hset(ROOM_KEY, { [`vote:${vote.playerId}`]: JSON.stringify(vote) });
+  await db().hset(ROOM_KEY, { [`vote:${vote.round}:${vote.playerId}`]: JSON.stringify(vote) });
 }
 
 export async function updateRoom(fields: Record<string, string | number | boolean>) {
