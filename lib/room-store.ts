@@ -12,6 +12,8 @@ export type Room = {
   adminId: string;
   password: string;
   topic: string;
+  previousTopic: string | null;
+  previousRound: number | null;
   revealed: boolean;
   round: number;
   createdAt: number;
@@ -46,6 +48,8 @@ export async function readRoom(): Promise<Room | null> {
     adminId: String(values.adminId),
     password: String(values.password ?? ""),
     topic: String(values.topic ?? "Primeira estimativa"),
+    previousTopic: values.previousTopic ? String(values.previousTopic) : null,
+    previousRound: values.previousRound ? Number(values.previousRound) : null,
     revealed: values.revealed === true || values.revealed === "true" || values.revealed === 1,
     round: Number(values.round ?? 1),
     createdAt: Number(values.createdAt ?? Date.now()),
@@ -54,7 +58,10 @@ export async function readRoom(): Promise<Room | null> {
   };
 }
 
-export async function createRoom(room: Omit<Room, "players" | "votes">, admin: Player) {
+export async function createRoom(
+  room: Omit<Room, "players" | "votes" | "previousTopic" | "previousRound">,
+  admin: Player,
+) {
   const claimed = await db().set(LOCK_KEY, "1", { nx: true, ex: TTL_SECONDS });
   if (!claimed) return false;
 

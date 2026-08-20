@@ -16,5 +16,7 @@ Não existe autenticação, servidor separado ou configuração adicional. A sen
 - Só existe uma sala global por vez.
 - Quem cria a sala vira admin.
 - O admin revela votos, inicia rodadas e encerra a sala.
+- Os jogadores podem alterar o voto mesmo depois da revelação.
+- O admin vê o título e os votos da rodada anterior.
 - Os clientes consultam o estado a cada 3 segundos.
 - A sala expira automaticamente após 6 horas.

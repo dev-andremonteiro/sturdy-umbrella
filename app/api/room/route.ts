@@ -26,6 +26,10 @@ function snapshot(room: Room | null, playerId = "") {
   const currentVotes = room.votes.filter((vote) => vote.round === room.round);
   const ownVote = currentVotes.find((vote) => vote.playerId === playerId)?.value ?? null;
   const numericVotes = currentVotes.map((vote) => Number(vote.value)).filter(Number.isFinite);
+  const previousVotes = room.previousRound
+    ? room.votes.filter((vote) => vote.round === room.previousRound)
+    : [];
+  const previousNumericVotes = previousVotes.map((vote) => Number(vote.value)).filter(Number.isFinite);
 
   return {
     active: true,
@@ -38,6 +42,24 @@ function snapshot(room: Room | null, playerId = "") {
     average:
       room.revealed && numericVotes.length
         ? Math.round((numericVotes.reduce((sum, vote) => sum + vote, 0) / numericVotes.length) * 10) / 10
+        : null,
+    previous:
+      room.adminId === playerId && room.previousRound
+        ? {
+            round: room.previousRound,
+            topic: room.previousTopic,
+            average: previousNumericVotes.length
+              ? Math.round(
+                  (previousNumericVotes.reduce((sum, vote) => sum + vote, 0) /
+                    previousNumericVotes.length) *
+                    10,
+                ) / 10
+              : null,
+            votes: room.players.map((player) => ({
+              name: player.name,
+              value: previousVotes.find((vote) => vote.playerId === player.id)?.value ?? null,
+            })),
+          }
         : null,
     players: room.players.map((player) => {
       const vote = currentVotes.find((item) => item.playerId === player.id);
@@ -111,7 +133,6 @@ export async function POST(request: NextRequest) {
     if (action === "vote") {
       const value = clean(body.value, 4);
       if (!DECK.includes(value)) return error("Carta inválida.");
-      if (room.revealed) return error("A votação já foi revelada.");
       await saveVote({ playerId, value, round: room.round });
     } else {
       if (room.adminId !== playerId) return error("Apenas o admin pode fazer isso.", 403);
@@ -121,6 +142,8 @@ export async function POST(request: NextRequest) {
       } else if (action === "next") {
         await updateRoom({
           topic: clean(body.topic, 90) || room.topic,
+          previousTopic: room.topic,
+          previousRound: room.round,
           revealed: false,
           round: room.round + 1,
         });

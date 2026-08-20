@@ -6,6 +6,12 @@ const DECK = ["?", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "☕"]
 const SESSION_KEY = "ponto-player";
 
 type Player = { name: string; admin: boolean; voted: boolean; vote: string | null };
+type PreviousRound = {
+  round: number;
+  topic: string | null;
+  average: number | null;
+  votes: { name: string; value: string | null }[];
+};
 type RoomState = {
   active: boolean;
   topic?: string;
@@ -15,6 +21,7 @@ type RoomState = {
   isAdmin?: boolean;
   ownVote?: string | null;
   average?: number | null;
+  previous?: PreviousRound | null;
   players?: Player[];
   playerId?: string;
   error?: string;
@@ -90,14 +97,14 @@ export default function Home() {
   }
 
   if (!room) {
-    return <main className="loading-page"><div className="spinner" /><p>Abrindo a mesa…</p></main>;
+    return <main className="loading-page"><div className="spinner" /><p>Carregando…</p></main>;
   }
 
   return (
     <main className="page-shell">
       <header className="topbar">
         <a className="brand" href="/" aria-label="Ponto, início"><span className="brand-mark">P</span><span>Ponto</span></a>
-        <div className="status"><i /> uma sala por vez</div>
+        <div className="status"><i /> sala única</div>
       </header>
 
       {message && <div className="notice" role="alert">{message}<button aria-label="Fechar aviso" onClick={() => setMessage("")}>×</button></div>}
@@ -105,10 +112,9 @@ export default function Home() {
       {!room.active ? (
         <section className="landing">
           <div className="hero-copy">
-            <span className="eyebrow">PLANNING POKER DIRETO AO PONTO</span>
-            <h1>Estimativas sem cerimônia.</h1>
-            <p>Crie a única sala ativa, compartilhe a senha com o time e comece a votar.</p>
-            <div className="steps"><span><b>1</b> Crie a sala</span><span><b>2</b> Compartilhe a senha</span><span><b>3</b> Revele os votos</span></div>
+            <span className="eyebrow">UMA SALA POR VEZ</span>
+            <h1>Planning poker</h1>
+            <p>Crie a sala e compartilhe a senha.</p>
           </div>
           <form className="entry-card" onSubmit={submitCreate}>
             <div className="card-heading"><span>Nova sala</span><small>você será o admin</small></div>
@@ -116,21 +122,21 @@ export default function Home() {
             <label>Senha da sala<input value={password} onChange={(e) => setPassword(e.target.value)} maxLength={32} placeholder="Algo fácil de compartilhar" required /></label>
             <label>Primeiro item <em>opcional</em><input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={90} placeholder="Ex: Tela de checkout" /></label>
             <button className="primary" disabled={busy}>{busy ? "Criando…" : "Criar sala"}<span>→</span></button>
-            <p className="fine-print">Sem conta. A sala expira automaticamente em 6 horas.</p>
+            <p className="fine-print">A sala expira em 6 horas.</p>
           </form>
         </section>
       ) : !room.isMember ? (
         <section className="join-wrap">
           <div className="join-intro">
-            <span className="eyebrow">SALA EM ANDAMENTO</span>
-            <h1>Seu time já está na mesa.</h1>
-            <p>Digite seu nome e a senha criada pelo admin para participar.</p>
+            <span className="eyebrow">SALA ATIVA</span>
+            <h1>Entrar na sala</h1>
+            <p>Informe seu nome e a senha.</p>
           </div>
           <form className="entry-card compact" onSubmit={submitJoin}>
             <div className="card-heading"><span>Entrar na sala</span><small>{room.players?.length ?? 0} na mesa</small></div>
             <label>Seu nome<input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Como devemos te chamar?" required /></label>
             <label>Senha<input value={password} onChange={(e) => setPassword(e.target.value)} maxLength={32} placeholder="Senha compartilhada pelo admin" required /></label>
-            <button className="primary" disabled={busy}>{busy ? "Entrando…" : "Sentar à mesa"}<span>→</span></button>
+            <button className="primary" disabled={busy}>{busy ? "Entrando…" : "Entrar"}<span>→</span></button>
           </form>
         </section>
       ) : (
@@ -142,15 +148,15 @@ export default function Home() {
             {room.revealed ? (
               <div className="result-panel">
                 <div><small>MÉDIA</small><strong>{room.average ?? "—"}</strong></div>
-                <p>Conversem sobre as diferenças e iniciem uma nova rodada quando estiverem prontos.</p>
+                <p>Os jogadores podem alterar os votos até a próxima rodada.</p>
               </div>
             ) : (
-              <div className="vote-intro"><h2>Escolha sua estimativa</h2><p>Seu voto fica escondido até o admin revelar.</p></div>
+              <div className="vote-intro"><h2>Escolha um voto</h2><p>Os votos ficam ocultos até o admin revelar.</p></div>
             )}
 
-            <div className={`deck ${room.revealed ? "disabled" : ""}`} aria-label="Cartas de estimativa">
+            <div className="deck" aria-label="Cartas de estimativa">
               {DECK.map((value) => (
-                <button key={value} className={room.ownVote === value ? "selected" : ""} onClick={() => act("vote", { value })} disabled={busy || room.revealed} aria-pressed={room.ownVote === value}>{value}</button>
+                <button key={value} className={room.ownVote === value ? "selected" : ""} onClick={() => act("vote", { value })} disabled={busy} aria-pressed={room.ownVote === value}>{value}</button>
               ))}
             </div>
 
@@ -160,12 +166,26 @@ export default function Home() {
                   <button className="primary reveal" onClick={() => act("reveal")} disabled={busy}>Revelar votos</button>
                 ) : (
                   <div className="next-round">
-                    <input value={nextTopic} onChange={(e) => setNextTopic(e.target.value)} maxLength={90} placeholder="Próximo item (opcional)" />
+                    <input value={nextTopic} onChange={(e) => setNextTopic(e.target.value)} maxLength={90} placeholder="Título da nova rodada" aria-label="Título da nova rodada" />
                     <button className="primary" onClick={() => { act("next", { topic: nextTopic }); setNextTopic(""); }} disabled={busy}>Nova rodada</button>
                   </div>
                 )}
                 <button className="danger-link" onClick={() => confirm("Encerrar a sala para todos?") && act("close")} disabled={busy}>Encerrar sala</button>
               </div>
+            )}
+
+            {room.isAdmin && room.previous && (
+              <section className="previous-round">
+                <div className="previous-heading">
+                  <div><small>RODADA {room.previous.round}</small><h2>{room.previous.topic}</h2></div>
+                  <span>Média <b>{room.previous.average ?? "—"}</b></span>
+                </div>
+                <div className="previous-votes">
+                  {room.previous.votes.map((vote, index) => (
+                    <div key={`${vote.name}-${index}`}><span>{vote.name}</span><b>{vote.value ?? "—"}</b></div>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
 

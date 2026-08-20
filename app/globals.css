@@ -35,10 +35,6 @@ button { color: inherit; }
 .eyebrow { display: inline-block; margin-bottom: 21px; color: var(--green-dark); font-size: 12px; font-weight: 850; letter-spacing: 1.7px; }
 .hero-copy h1, .join-intro h1 { max-width: 680px; margin: 0; font-size: clamp(52px, 6.2vw, 82px); line-height: .98; letter-spacing: -4px; }
 .hero-copy > p, .join-intro p { max-width: 600px; margin: 27px 0 0; color: var(--muted); font-size: 18px; line-height: 1.65; }
-.steps { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 42px; }
-.steps span { display: flex; align-items: center; gap: 9px; color: #536159; font-size: 13px; font-weight: 650; }
-.steps b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #aeb7b0; border-radius: 50%; color: var(--ink); font-size: 11px; }
-
 .entry-card { padding: 30px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: 0 24px 70px rgba(40, 49, 43, .09); }
 .entry-card.compact { width: min(440px, 100%); justify-self: end; }
 .card-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 27px; }
@@ -72,8 +68,6 @@ input:focus { border-color: #557c31; box-shadow: 0 0 0 3px rgba(185, 242, 46, .2
 .deck button { aspect-ratio: .72; min-height: 104px; border: 1px solid #bdbfb8; border-radius: 11px; background: var(--card); box-shadow: 0 4px 0 #ced0c8; cursor: pointer; font-size: clamp(23px, 2.4vw, 32px); font-weight: 850; transition: transform .15s, border-color .15s, background .15s, box-shadow .15s; }
 .deck button:hover:not(:disabled) { transform: translateY(-5px) rotate(-1deg); border-color: var(--ink); box-shadow: 0 8px 0 #c7c9c0; }
 .deck button.selected { border: 2px solid var(--ink); background: var(--green); box-shadow: 0 5px 0 var(--ink); transform: translateY(-3px); }
-.deck.disabled button:not(.selected) { opacity: .45; }
-
 .result-panel { display: flex; max-width: 820px; align-items: center; gap: 28px; margin-top: 38px; padding: 22px 26px; border: 1px solid #b9ccb8; border-radius: 14px; background: #edf7e8; }
 .result-panel div { min-width: 90px; padding-right: 25px; border-right: 1px solid #c8d8c6; }
 .result-panel small { display: block; color: #5d7261; font-size: 10px; font-weight: 850; letter-spacing: 1.2px; }
@@ -86,6 +80,17 @@ input:focus { border-color: #557c31; box-shadow: 0 0 0 3px rgba(185, 242, 46, .2
 .next-round { display: flex; flex: 1; gap: 10px; }
 .next-round input { height: 50px; margin: 0; }
 .next-round .primary { min-width: 145px; box-shadow: none; }
+
+.previous-round { max-width: 820px; margin-top: 32px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 253, 248, .7); }
+.previous-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+.previous-heading small { color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: 1.2px; }
+.previous-heading h2 { margin: 4px 0 0; font-size: 18px; overflow-wrap: anywhere; }
+.previous-heading > span { flex: 0 0 auto; color: var(--muted); font-size: 12px; }
+.previous-heading > span b { margin-left: 5px; color: var(--ink); font-size: 20px; }
+.previous-votes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px 18px; padding-top: 17px; }
+.previous-votes div { display: flex; align-items: center; justify-content: space-between; min-width: 0; gap: 8px; font-size: 12px; }
+.previous-votes span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.previous-votes b { display: grid; place-items: center; min-width: 28px; height: 32px; padding: 0 5px; border: 1px solid #c9cbc4; border-radius: 6px; background: white; }
 
 .players-panel { align-self: start; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 253, 248, .75); }
 .panel-title { display: flex; align-items: center; justify-content: space-between; padding: 19px 20px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 800; }
@@ -122,7 +127,6 @@ input:focus { border-color: #557c31; box-shadow: 0 0 0 3px rgba(185, 242, 46, .2
   .landing, .join-wrap { min-height: calc(100vh - 72px); padding: 40px 0 56px; }
   .hero-copy h1, .join-intro h1 { font-size: 48px; letter-spacing: -2.8px; }
   .hero-copy > p, .join-intro p { font-size: 16px; }
-  .steps { gap: 12px 18px; }
   .entry-card { padding: 22px 18px; }
   .room-layout { gap: 25px; padding-top: 35px; }
   .table-area > h1 { font-size: 38px; letter-spacing: -1.8px; }
@@ -132,6 +136,7 @@ input:focus { border-color: #557c31; box-shadow: 0 0 0 3px rgba(185, 242, 46, .2
   .admin-bar, .next-round { align-items: stretch; flex-direction: column; }
   .danger-link { margin: 4px 0 0; align-self: flex-start; min-height: 40px; }
   .next-round .primary { min-width: 0; }
+  .previous-votes { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
